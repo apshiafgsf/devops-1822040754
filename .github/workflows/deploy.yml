@@ -1,0 +1,59 @@
+name: CI/CD Pipeline - Website Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Kiem tra su ton tai cua 3 file (index.html, style.css, script.js)
+        run: |
+          if [ ! -f index.html ] || [ ! -f style.css ] || [ ! -f script.js ]; then
+            echo "Loi: Khong tim thay du 3 file index.html, style.css, script.js!"
+            exit 1
+          fi
+          echo "Xac nhan: Da co du 3 file required."
+
+      - name: Kiem tra the <title> trong index.html
+        run: |
+          if ! grep -q "<title>" index.html; then
+            echo "Loi: File index.html thieu the <title>!"
+            exit 1
+          fi
+          echo "Xac nhan: File index.html co the <title>."
+
+  deploy:
+    needs: check
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
